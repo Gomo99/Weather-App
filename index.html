@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ultra Weather App</title>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: linear-gradient(135deg,#667eea,#764ba2);
+    --card: rgba(0,0,0,0.45);
+    --text: white;
+}
+
+body.light {
+    --card: rgba(255,255,255,0.65);
+    --text: #111;
+}
+
+body {
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 1s ease, color .5s ease;
+}
+
+.container {
+    width: 380px;
+    padding: 25px;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.35);
+    transition: background .5s ease;
+}
+
+h1 { text-align: center; margin-bottom: 10px; }
+
+input {
+    padding: 10px;
+    width: 210px;
+    border-radius: 6px;
+    border: none;
+}
+
+button {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #4f46e5;
+    color: white;
+    cursor: pointer;
+}
+
+.toggle {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.weather-info {
+    display: none;
+    text-align: center;
+    margin-top: 15px;
+}
+
+.icon {
+    width: 90px;
+    margin: auto;
+}
+
+/* ☀️ Sun */
+.sun {
+    animation: glow 2s infinite alternate;
+}
+
+/* ☁️ Clouds */
+.cloud {
+    animation: drift 4s infinite linear;
+}
+
+/* 🌧 Rain */
+.rain {
+    animation: rain 0.7s infinite linear;
+}
+
+/* ❄ Snow */
+.snow {
+    animation: snow 3s infinite linear;
+}
+
+@keyframes glow {
+    from { filter: drop-shadow(0 0 5px gold); }
+    to { filter: drop-shadow(0 0 20px gold); }
+}
+
+@keyframes drift {
+    from { transform: translateX(-5px); }
+    to { transform: translateX(5px); }
+}
+
+@keyframes rain {
+    from { transform: translateY(-3px); }
+    to { transform: translateY(3px); }
+}
+
+@keyframes snow {
+    from { transform: translateY(-4px); }
+    to { transform: translateY(4px); }
+}
+
+.details p {
+    font-size: 0.9rem;
+    margin: 3px 0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🌦 Weather App</h1>
+
+    <div style="text-align:center">
+        <input id="cityInput" placeholder="Enter city">
+        <button onclick="searchCity()">Search</button>
+    </div>
+
+    <div class="toggle">
+        <button onclick="toggleMode()">🌗 Toggle Dark Mode</button>
+    </div>
+
+    <div class="weather-info" id="weatherInfo">
+        <h2 id="cityName"></h2>
+        <img id="icon" class="icon">
+        <div class="details">
+            <p id="temp"></p>
+            <p id="feels"></p>
+            <p id="sun"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+const apiKey = "972c618d028e5e28ca1bad112b49468c";
+let manualMode = localStorage.getItem("mode");
+
+if (manualMode === "light") document.body.classList.add("light");
+
+function toggleMode() {
+    document.body.classList.toggle("light");
+    localStorage.setItem("mode",
+        document.body.classList.contains("light") ? "light" : "dark"
+    );
+}
+
+async function searchCity() {
+    const city = cityInput.value.trim();
+    if (!city) return;
+
+    const res = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+    );
+    const data = await res.json();
+    updateUI(data);
+}
+
+function updateUI(data) {
+    weatherInfo.style.display = "block";
+
+    cityName.textContent = `${data.name}, ${data.sys.country}`;
+    temp.textContent = `🌡 ${data.main.temp.toFixed(1)} °C`;
+    feels.textContent = `Feels like ${data.main.feels_like.toFixed(1)} °C`;
+    sun.textContent = `🌅 ${time(data.sys.sunrise)} | 🌇 ${time(data.sys.sunset)}`;
+
+    setTheme(data.sys.sunrise, data.sys.sunset);
+    setIcon(data.weather[0].main.toLowerCase(), data.weather[0].icon);
+}
+
+function setTheme(sunrise, sunset) {
+    const now = Date.now() / 1000;
+    const isDay = now > sunrise && now < sunset;
+
+    document.body.style.setProperty("--bg",
+        isDay
+        ? "linear-gradient(135deg,#fbd3e9,#bb377d)"
+        : "linear-gradient(135deg,#0f2027,#203a43,#2c5364)"
+    );
+}
+
+function setIcon(type, icon) {
+    iconEl.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+    iconEl.className = "icon";
+
+    if (type.includes("clear")) iconEl.classList.add("sun");
+    else if (type.includes("cloud")) iconEl.classList.add("cloud");
+    else if (type.includes("rain")) iconEl.classList.add("rain");
+    else if (type.includes("snow")) iconEl.classList.add("snow");
+}
+
+function time(u) {
+    return new Date(u * 1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+}
+</script>
+
+</body>
+</html>
