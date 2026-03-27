@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ultra Weather App</title>
 
 <style>
@@ -14,7 +15,7 @@
 }
 
 body.light {
-    --card: rgba(255,255,255,0.65);
+    --card: rgba(255,255,255,0.75);
     --text: #111;
 }
 
@@ -26,30 +27,40 @@ body {
     align-items: center;
     background: var(--bg);
     color: var(--text);
-    transition: background 1s ease, color .5s ease;
+    transition: background 1s ease;
+    padding: 15px;
 }
 
 .container {
-    width: 380px;
-    padding: 25px;
+    width: 100%;
+    max-width: 430px;
+    padding: 22px;
     background: var(--card);
-    border-radius: 16px;
+    border-radius: 18px;
     box-shadow: 0 20px 40px rgba(0,0,0,.35);
-    transition: background .5s ease;
 }
 
-h1 { text-align: center; margin-bottom: 10px; }
+h1 {
+    text-align: center;
+    margin-bottom: 12px;
+    font-size: clamp(1.4rem, 5vw, 1.8rem);
+}
+
+.search {
+    display: flex;
+    gap: 8px;
+}
 
 input {
-    padding: 10px;
-    width: 210px;
-    border-radius: 6px;
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
     border: none;
 }
 
 button {
-    padding: 10px 14px;
-    border-radius: 6px;
+    padding: 12px 16px;
+    border-radius: 8px;
     border: none;
     background: #4f46e5;
     color: white;
@@ -57,65 +68,91 @@ button {
 }
 
 .toggle {
-    margin-top: 10px;
     text-align: center;
+    margin: 10px 0;
 }
 
 .weather-info {
     display: none;
     text-align: center;
-    margin-top: 15px;
 }
 
 .icon {
-    width: 90px;
-    margin: auto;
-}
-
-/* ☀️ Sun */
-.sun {
-    animation: glow 2s infinite alternate;
-}
-
-/* ☁️ Clouds */
-.cloud {
-    animation: drift 4s infinite linear;
-}
-
-/* 🌧 Rain */
-.rain {
-    animation: rain 0.7s infinite linear;
-}
-
-/* ❄ Snow */
-.snow {
-    animation: snow 3s infinite linear;
-}
-
-@keyframes glow {
-    from { filter: drop-shadow(0 0 5px gold); }
-    to { filter: drop-shadow(0 0 20px gold); }
-}
-
-@keyframes drift {
-    from { transform: translateX(-5px); }
-    to { transform: translateX(5px); }
-}
-
-@keyframes rain {
-    from { transform: translateY(-3px); }
-    to { transform: translateY(3px); }
-}
-
-@keyframes snow {
-    from { transform: translateY(-4px); }
-    to { transform: translateY(4px); }
+    width: 80px;
+    margin: 10px auto;
 }
 
 .details p {
     font-size: 0.9rem;
     margin: 3px 0;
+    
 }
+
+/* ☀️ Sun */
+.sun { animation: glow 2s infinite alternate; }
+/* ☁️ Cloud */
+.cloud { animation: drift 4s infinite linear; }
+/* 🌧 Rain */
+.rain { animation: rain 0.7s infinite linear; }
+/* ❄ Snow */
+.snow { animation: snow 3s infinite linear; }
+
+@keyframes glow {
+    from { filter: drop-shadow(0 0 5px gold); }
+    to { filter: drop-shadow(0 0 20px gold); }
+}
+@keyframes drift {
+    from { transform: translateX(-5px); }
+    to { transform: translateX(5px); }
+}
+@keyframes rain {
+    from { transform: translateY(-3px); }
+    to { transform: translateY(3px); }
+}
+@keyframes snow {
+    from { transform: translateY(-4px); }
+    to { transform: translateY(4px); }
+}
+
+/* 📊 Hourly forecast slider */
+.hourly {
+    margin-top: 15px;
+}
+
+.hourly h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.hourly-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+}
+
+.hour {
+    min-width: 75px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 8px;
+    text-align: center;
+    scroll-snap-align: start;
+    font-size: 0.8rem;
+}
+
+.hour img {
+    width: 40px;
+}
+
+.trend-up { color: #22c55e; }     /* green */
+.trend-down { color: #ef4444; }  /* red */
+.trend-flat { color: #eab308; }  /* yellow */
+
+
+
+
 </style>
 </head>
 
@@ -124,7 +161,7 @@ button {
 <div class="container">
     <h1>🌦 Weather App</h1>
 
-    <div style="text-align:center">
+    <div class="search">
         <input id="cityInput" placeholder="Enter city">
         <button onclick="searchCity()">Search</button>
     </div>
@@ -136,38 +173,77 @@ button {
     <div class="weather-info" id="weatherInfo">
         <h2 id="cityName"></h2>
         <img id="icon" class="icon">
+
         <div class="details">
             <p id="temp"></p>
             <p id="feels"></p>
             <p id="sun"></p>
         </div>
+
+        <!-- 📊 HOURLY FORECAST -->
+        <div class="hourly">
+            <h3>Hourly Forecast</h3>
+            <div class="hourly-scroll" id="hourly"></div>
+        </div>
+
+        <p id="trend"></p>
+
     </div>
 </div>
 
 <script>
 const apiKey = "972c618d028e5e28ca1bad112b49468c";
-let manualMode = localStorage.getItem("mode");
 
-if (manualMode === "light") document.body.classList.add("light");
+// 🔹 DOM elements (FIXED)
+const cityInput = document.getElementById("cityInput");
+const weatherInfo = document.getElementById("weatherInfo");
+const cityName = document.getElementById("cityName");
+const temp = document.getElementById("temp");
+const feels = document.getElementById("feels");
+const sun = document.getElementById("sun");
+const iconEl = document.getElementById("icon");
+const hourlyEl = document.getElementById("hourly");
+const trendEl = document.getElementById("trend");
+
+// 🔹 Dark mode persistence
+if (localStorage.getItem("mode") === "light") {
+    document.body.classList.add("light");
+}
 
 function toggleMode() {
     document.body.classList.toggle("light");
-    localStorage.setItem("mode",
+    localStorage.setItem(
+        "mode",
         document.body.classList.contains("light") ? "light" : "dark"
     );
 }
 
+// 🔹 Search city
 async function searchCity() {
     const city = cityInput.value.trim();
     if (!city) return;
 
-    const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
-    );
-    const data = await res.json();
-    updateUI(data);
+    try {
+        const current = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+        ).then(r => r.json());
+
+        if (current.cod !== 200) throw new Error("City not found");
+
+        const forecast = await fetch(
+            `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`
+        ).then(r => r.json());
+
+        updateUI(current);
+        buildHourly(forecast.list.slice(0, 8));
+        setTrend(current.main.temp, forecast.list[0].main.temp);
+
+    } catch (err) {
+        alert(err.message);
+    }
 }
 
+// 🔹 Update UI
 function updateUI(data) {
     weatherInfo.style.display = "block";
 
@@ -180,17 +256,33 @@ function updateUI(data) {
     setIcon(data.weather[0].main.toLowerCase(), data.weather[0].icon);
 }
 
+// 🔹 Hourly forecast
+function buildHourly(hours) {
+    hourlyEl.innerHTML = "";
+    hours.forEach(h => {
+        const div = document.createElement("div");
+        div.className = "hour";
+        div.innerHTML = `
+            <div>${hour(h.dt)}</div>
+            <img src="https://openweathermap.org/img/wn/${h.weather[0].icon}.png">
+            <div>${Math.round(h.main.temp)}°</div>
+        `;
+        hourlyEl.appendChild(div);
+    });
+}
+
+// 🔹 Day / Night theme
 function setTheme(sunrise, sunset) {
     const now = Date.now() / 1000;
-    const isDay = now > sunrise && now < sunset;
-
-    document.body.style.setProperty("--bg",
-        isDay
-        ? "linear-gradient(135deg,#fbd3e9,#bb377d)"
-        : "linear-gradient(135deg,#0f2027,#203a43,#2c5364)"
+    document.body.style.setProperty(
+        "--bg",
+        now > sunrise && now < sunset
+            ? "linear-gradient(135deg,#fbd3e9,#bb377d)"
+            : "linear-gradient(135deg,#0f2027,#203a43,#2c5364)"
     );
 }
 
+// 🔹 Animated icon
 function setIcon(type, icon) {
     iconEl.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
     iconEl.className = "icon";
@@ -201,10 +293,39 @@ function setIcon(type, icon) {
     else if (type.includes("snow")) iconEl.classList.add("snow");
 }
 
+// 🔹 Helpers
 function time(u) {
-    return new Date(u * 1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    return new Date(u * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function hour(u) {
+    return new Date(u * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        hour12: true
+    });
+}
+
+// 🔹 Temperature trend
+function setTrend(currentTemp, nextTemp) {
+    const diff = nextTemp - currentTemp;
+    trendEl.className = "";
+
+    if (diff > 0.5) {
+        trendEl.textContent = "📈 Rising temperature";
+        trendEl.classList.add("trend-up");
+    } else if (diff < -0.5) {
+        trendEl.textContent = "📉 Falling temperature";
+        trendEl.classList.add("trend-down");
+    } else {
+        trendEl.textContent = "➖ Stable temperature";
+        trendEl.classList.add("trend-flat");
+    }
 }
 </script>
+
 
 </body>
 </html>
